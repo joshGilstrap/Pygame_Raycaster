@@ -9,7 +9,7 @@ clock = pygame.time.Clock()
 
 player_x = 6.0
 player_y = 8.0
-playerAngle = math.pi / 2
+player_angle = math.pi / 2
 
 font = pygame.font.Font(None, 24)
 
@@ -22,91 +22,91 @@ def is_wall(x, y):
     return cell == '#'
 
 def handle_user_input(elapsed_time):
-    global player_x, player_y, playerAngle
+    global player_x, player_y, player_angle
     keys = pygame.key.get_pressed()
     speed = 3.0 * elapsed_time
     dx, dy = 0, 0
     
     if keys[pygame.K_w]:
-        dx += math.sin(playerAngle)
-        dy += math.cos(playerAngle)
+        dx += math.sin(player_angle)
+        dy += math.cos(player_angle)
     if keys[pygame.K_s]:
-        dx -= math.sin(playerAngle)
-        dy -= math.cos(playerAngle)
+        dx -= math.sin(player_angle)
+        dy -= math.cos(player_angle)
     if keys[pygame.K_a]:
-        dx -= math.cos(playerAngle)
-        dy += math.sin(playerAngle)
+        dx -= math.cos(player_angle)
+        dy += math.sin(player_angle)
     if keys[pygame.K_d]:
-        dx += math.cos(playerAngle)
-        dy -= math.sin(playerAngle)
+        dx += math.cos(player_angle)
+        dy -= math.sin(player_angle)
     
     magnitude = math.sqrt(dx * dx + dy * dy)
     if magnitude > 0:
         dx /= magnitude
         dy /= magnitude
 
-    newX = player_x + dx * speed
-    newY = player_y + dy * speed
+    new_x = player_x + dx * speed
+    new_y = player_y + dy * speed
 
-    if not is_wall(newX, newY):
-        player_x = newX
-        player_y = newY
+    if not is_wall(new_x, new_y):
+        player_x = new_x
+        player_y = new_y
     
     if keys[pygame.K_LEFT]:
-        playerAngle -= elapsed_time
+        player_angle -= elapsed_time
     if keys[pygame.K_RIGHT]:
-        playerAngle += elapsed_time
+        player_angle += elapsed_time
 
 def perform_raycasting():
     for x in range(SCREEN_WIDTH):
-        rayAngle = playerAngle - FOV / 2.0 + (x / SCREEN_WIDTH) * FOV
-        distToWall = 0
-        hitWall = False
+        ray_angle = player_angle - FOV / 2.0 + (x / SCREEN_WIDTH) * FOV
+        dist_to_wall = 0
+        hit_wall = False
 
-        focalX = math.sin(rayAngle)
-        focalY = math.cos(rayAngle)
+        focal_x = math.sin(ray_angle)
+        focal_y = math.cos(ray_angle)
 
-        while not hitWall and distToWall < DEPTH:
-            distToWall += 0.1
-            testX = int(player_x + focalX * distToWall)
-            testY = int(player_y + focalY * distToWall)
+        while not hit_wall and dist_to_wall < DEPTH:
+            dist_to_wall += 0.1
+            test_x = int(player_x + focal_x * dist_to_wall)
+            test_y = int(player_y + focal_y * dist_to_wall)
 
-            if testX < 0 or testX >= MAP_WIDTH or testY < 0 or testY >= MAP_HEIGHT:
-                hitWall = True
-                distToWall = DEPTH
+            if test_x < 0 or test_x >= MAP_WIDTH or test_y < 0 or test_y >= MAP_HEIGHT:
+                hit_wall = True
+                dist_to_wall = DEPTH
             else:
-                if GAME_MAP[testY][testX] == "#":
-                    hitWall = True
+                if GAME_MAP[test_y][test_x] == "#":
+                    hit_wall = True
 
-        ceiling = int(SCREEN_HEIGHT / 2 - SCREEN_HEIGHT / distToWall)
+        ceiling = int(SCREEN_HEIGHT / 2 - SCREEN_HEIGHT / dist_to_wall)
         floor = SCREEN_HEIGHT - ceiling
-        xScreen = x * (SCREEN_WIDTH / SCREEN_WIDTH)
+        x_screen = x * (SCREEN_WIDTH / SCREEN_WIDTH)
 
-        pygame.draw.line(screen, (0, 0, 65), (xScreen, 0), (xScreen, ceiling))
-        shade = int(255 - (distToWall / DEPTH) * 255)
+        pygame.draw.line(screen, (0, 0, 65), (x_screen, 0), (x_screen, ceiling))
+        shade = int(255 - (dist_to_wall / DEPTH) * 255)
         blue_shade = max(0, min(shade + 15, 255))
-        pygame.draw.line(screen, (shade, shade, blue_shade), (xScreen, ceiling), (xScreen, floor))
-        pygame.draw.line(screen, (0, 0, 35), (xScreen, floor), (xScreen, SCREEN_HEIGHT))
+        pygame.draw.line(screen, (shade, shade, blue_shade), (x_screen, ceiling), (x_screen, floor))
+        pygame.draw.line(screen, (0, 0, 35), (x_screen, floor), (x_screen, SCREEN_HEIGHT))
         
 def draw_mini_map():
-    miniMapX = SCREEN_WIDTH - MINI_MAP_SCALE * MAP_WIDTH - 2
-    miniMapY = 0
+    mini_map_x = SCREEN_WIDTH - MINI_MAP_SCALE * MAP_WIDTH - 2
+    mini_map_y = 0
 
     for y in range(MAP_HEIGHT):
         for x in range(MAP_WIDTH):
             if GAME_MAP[y][x] == "#":
-                pygame.draw.rect(screen, WHITE, (miniMapX + x * MINI_MAP_SCALE, miniMapY + y * MINI_MAP_SCALE, MINI_MAP_SCALE, MINI_MAP_SCALE))
+                pygame.draw.rect(screen, WHITE, (mini_map_x + x * MINI_MAP_SCALE, mini_map_y + y * MINI_MAP_SCALE, MINI_MAP_SCALE, MINI_MAP_SCALE))
             else:
-                pygame.draw.rect(screen, (50, 50, 50), (miniMapX + x * MINI_MAP_SCALE, miniMapY + y * MINI_MAP_SCALE, MINI_MAP_SCALE, MINI_MAP_SCALE))
+                pygame.draw.rect(screen, (50, 50, 50), (mini_map_x + x * MINI_MAP_SCALE, mini_map_y + y * MINI_MAP_SCALE, MINI_MAP_SCALE, MINI_MAP_SCALE))
 
-    fovLineLength = 5
-    fovStartX = miniMapX + player_x * MINI_MAP_SCALE
-    fovStartY = miniMapY + player_y * MINI_MAP_SCALE
-    fovEndX = fovStartX + fovLineLength * math.sin(playerAngle)
-    fovEndY = fovStartY + fovLineLength * math.cos(playerAngle)
+    fov_line_length = 5
+    fov_start_x = mini_map_x + player_x * MINI_MAP_SCALE
+    fov_start_y = mini_map_y + player_y * MINI_MAP_SCALE
+    fov_end_x = fov_start_x + fov_line_length * math.sin(player_angle)
+    fov_end_y = fov_start_y + fov_line_length * math.cos(player_angle)
 
-    pygame.draw.line(screen, (255, 255, 0), (fovStartX, fovStartY), (fovEndX, fovEndY))
-    pygame.draw.circle(screen, (255, 0, 0), (int(miniMapX + player_x * MINI_MAP_SCALE), int(miniMapY + player_y * MINI_MAP_SCALE)), MINI_MAP_SCALE)
+    pygame.draw.line(screen, (255, 255, 0), (fov_start_x, fov_start_y), (fov_end_x, fov_end_y))
+    pygame.draw.circle(screen, (255, 0, 0), (int(mini_map_x + player_x * MINI_MAP_SCALE), int(mini_map_y + player_y * MINI_MAP_SCALE)), MINI_MAP_SCALE)
 
 def draw_info(fps):
     text_fps = font.render(f"FPS: {fps}", True, WHITE)
