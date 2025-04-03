@@ -13,6 +13,8 @@ player_angle = math.pi / 2
 
 font = pygame.font.Font(None, 24)
 
+light_sources = [[18, 2, 0.3], [28, 2, 0.2], [11, 14, 0.5]]
+
 def is_wall(x, y):
     grid_x = int(x)
     grid_y = int(y)
@@ -57,6 +59,16 @@ def handle_user_input(elapsed_time):
     if keys[pygame.K_RIGHT]:
         player_angle += elapsed_time
 
+def calculate_light_intensity(x, y, dist_to_wall):
+    total_intensity = 0.0
+    for lx, ly, intensity in light_sources:
+        dist_to_light = math.sqrt((x - lx) ** 2 + (y - ly) ** 2)
+        light_falloff = max(0.0, 1.0 - dist_to_light / 10.0)
+        total_intensity += intensity * light_falloff
+        
+    total_intensity += 0.3 * (1.0 - dist_to_wall / DEPTH)
+    return min(1.0, total_intensity)
+
 def perform_raycasting():
     for x in range(SCREEN_WIDTH):
         ray_angle = player_angle - FOV / 2.0 + (x / SCREEN_WIDTH) * FOV
@@ -68,14 +80,16 @@ def perform_raycasting():
 
         while not hit_wall and dist_to_wall < DEPTH:
             dist_to_wall += 0.1
-            test_x = int(player_x + focal_x * dist_to_wall)
-            test_y = int(player_y + focal_y * dist_to_wall)
+            test_x = player_x + focal_x * dist_to_wall
+            test_y = player_y + focal_y * dist_to_wall
+            grid_x = int(test_x)
+            grid_y = int(test_y)
 
-            if test_x < 0 or test_x >= MAP_WIDTH or test_y < 0 or test_y >= MAP_HEIGHT:
+            if grid_x < 0 or grid_x >= MAP_WIDTH or grid_y < 0 or grid_y >= MAP_HEIGHT:
                 hit_wall = True
                 dist_to_wall = DEPTH
             else:
-                if GAME_MAP[test_y][test_x] == "#":
+                if GAME_MAP[grid_y][grid_x] == "#":
                     hit_wall = True
 
         ceiling = int(SCREEN_HEIGHT / 2 - SCREEN_HEIGHT / dist_to_wall)
@@ -83,10 +97,32 @@ def perform_raycasting():
         x_screen = x * (SCREEN_WIDTH / SCREEN_WIDTH)
 
         pygame.draw.line(screen, (0, 0, 65), (x_screen, 0), (x_screen, ceiling))
-        shade = int(255 - (dist_to_wall / DEPTH) * 255)
-        blue_shade = max(0, min(shade + 15, 255))
-        pygame.draw.line(screen, (shade, shade, blue_shade), (x_screen, ceiling), (x_screen, floor))
+
+        # Lighting and shading:
+        light_intensity = calculate_light_intensity(test_x, test_y, dist_to_wall) # Calculate light intensity
+
+        base_shade = 200 # Base brightness of the walls
+        shade = int(base_shade * light_intensity)
+        shade = max(0, min(shade, 255)) # Clamp the shade value
+
+        pygame.draw.line(screen, (shade, shade, shade + 15), (x_screen, ceiling), (x_screen, floor))
         pygame.draw.line(screen, (0, 0, 35), (x_screen, floor), (x_screen, SCREEN_HEIGHT))
+
+        
+        # max_dist = DEPTH
+        # light_intensity = calculate_light_intensity(test_x, test_y, dist_to_wall)
+        
+        # base_shade = 200
+        # shade = int(base_shade * light_intensity)
+        # shade = max(0, min(shade + 15, 255))
+        
+        # pygame.draw.line(screen, (shade - 15, shade - 15, shade), (x_screen, ceiling), (x_screen, floor))
+        # pygame.draw.line(screen, (0, 0, 35), (x_screen, floor), (x_screen, SCREEN_HEIGHT))
+        
+        # shade = int(255 - (dist_to_wall / DEPTH) * 255)
+        # blue_shade = max(0, min(shade + 15, 255))
+        # pygame.draw.line(screen, (shade, shade, blue_shade), (x_screen, ceiling), (x_screen, floor))
+        # pygame.draw.line(screen, (0, 0, 35), (x_screen, floor), (x_screen, SCREEN_HEIGHT))
         
 def draw_mini_map():
     mini_map_x = SCREEN_WIDTH - MINI_MAP_SCALE * MAP_WIDTH - 2
@@ -107,6 +143,9 @@ def draw_mini_map():
 
     pygame.draw.line(screen, (255, 255, 0), (fov_start_x, fov_start_y), (fov_end_x, fov_end_y))
     pygame.draw.circle(screen, (255, 0, 0), (int(mini_map_x + player_x * MINI_MAP_SCALE), int(mini_map_y + player_y * MINI_MAP_SCALE)), MINI_MAP_SCALE)
+    
+    for lx, ly, _ in light_sources:
+        pygame.draw.circle(screen, YELLOW, (int(mini_map_x + lx * MINI_MAP_SCALE), int(mini_map_y + ly * MINI_MAP_SCALE)), MINI_MAP_SCALE // 2)
 
 def draw_info(fps):
     text_fps = font.render(f"FPS: {fps}", True, WHITE)

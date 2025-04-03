@@ -15,7 +15,7 @@ YELLOW = (255, 255, 0)
 MAP_HEIGHT = 16
 MAP_WIDTH = 32
 FOV = math.pi / 6
-DEPTH = 22.0
+DEPTH = MAP_WIDTH
 
 GAME_MAP = [
     "################################",
