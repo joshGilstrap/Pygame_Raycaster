@@ -1,8 +1,8 @@
 # Pygame Raycaster
 
 This project is a simple 3D raycaster implemented using Pygame, inspired by classic first-person shooters. It renders a basic 3D environment from a 2D map, allowing the player to move and rotate within the generated world.
-![Recording2025-03-31052848-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/100f16cf-74ea-471f-83a1-65950d80de93)
 
+![Recording2025-04-03111825-ezgif com-optimize](https://github.com/user-attachments/assets/4f90ce1e-17b9-4f7f-956e-9023df7b94eb)
 
 ## Features
 
@@ -13,6 +13,7 @@ This project is a simple 3D raycaster implemented using Pygame, inspired by clas
 * **FPS Display:** Shows the current frames per second.
 * **Movement Instructions:** Displays movement instructions on screen.
 * **Normalized Diagonal Movement:** Ensures consistent movement speed regardless of direction.
+* **Light Sources:** Yellow dots on the mini-map show the sources of light.
 
 ## Getting Started
 
