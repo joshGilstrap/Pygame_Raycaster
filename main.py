@@ -13,8 +13,17 @@ player_angle = math.pi / 2
 
 font = pygame.font.Font(None, 24)
 
-light_sources = [[18, 2, 0.3], [28, 2, 0.2], [11, 14, 0.5]]
+light_sources = [[player_x, player_y, 0.8, 5.0], [11, 11, 1.0, 3.0], [18, 2, 0.3, 15.0], [28, 2, 0.8, 10.0]]
 
+angle_cahce = {}
+
+'''Efficiently calculates sine and cosine to prevent multiple calls'''
+def get_sin_cos(angle):
+    if angle not in angle_cahce:
+        angle_cahce[angle] = (math.sin(angle), math.cos(angle))
+    return angle_cahce[angle]
+
+'''Determine if an x, y position on the map is a wall'''
 def is_wall(x, y):
     grid_x = int(x)
     grid_y = int(y)
@@ -23,24 +32,28 @@ def is_wall(x, y):
     cell = GAME_MAP[grid_y][grid_x]
     return cell == '#'
 
+'''Handle all movement: forawrd/backward, strafing, rotation. Normalizes
+movement and detects wall collisions.'''
 def handle_user_input(elapsed_time):
     global player_x, player_y, player_angle
     keys = pygame.key.get_pressed()
     speed = 3.0 * elapsed_time
     dx, dy = 0, 0
     
+    sin_a, cos_a = get_sin_cos(player_angle)
+    
     if keys[pygame.K_w]:
-        dx += math.sin(player_angle)
-        dy += math.cos(player_angle)
+        dx += sin_a
+        dy += cos_a
     if keys[pygame.K_s]:
-        dx -= math.sin(player_angle)
-        dy -= math.cos(player_angle)
+        dx -= sin_a
+        dy -= cos_a
     if keys[pygame.K_a]:
-        dx -= math.cos(player_angle)
-        dy += math.sin(player_angle)
+        dx -= cos_a
+        dy += sin_a
     if keys[pygame.K_d]:
-        dx += math.cos(player_angle)
-        dy -= math.sin(player_angle)
+        dx += cos_a
+        dy -= sin_a
     
     magnitude = math.sqrt(dx * dx + dy * dy)
     if magnitude > 0:
@@ -53,30 +66,45 @@ def handle_user_input(elapsed_time):
     if not is_wall(new_x, new_y):
         player_x = new_x
         player_y = new_y
+        light_sources[0][0] = player_x
+        light_sources[0][1] = player_y
     
     if keys[pygame.K_LEFT]:
         player_angle -= elapsed_time
     if keys[pygame.K_RIGHT]:
         player_angle += elapsed_time
 
+'''Determine how bright a wall should be based on player distance,
+light falloff, and depth.'''
 def calculate_light_intensity(x, y, dist_to_wall):
     total_intensity = 0.0
-    for lx, ly, intensity in light_sources:
+    for lx, ly, intensity, light_range in light_sources:
         dist_to_light = math.sqrt((x - lx) ** 2 + (y - ly) ** 2)
-        light_falloff = max(0.0, 1.0 - dist_to_light / 10.0)
+        light_falloff = max(0.0, 1.0 - dist_to_light / light_range)
         total_intensity += intensity * light_falloff
         
     total_intensity += 0.3 * (1.0 - dist_to_wall / DEPTH)
     return min(1.0, total_intensity)
 
+'''Main raycasting function. Follows basic raycasting logic:
+Find angle
+Cast ray at angle until a wall or map border is hit
+Calculate length of ceiling/floor portions of column
+Draw ceiling line
+Calculate the color of the wall based on lighting
+Draw wall line
+Draw floor line
+'''
 def perform_raycasting():
+    global screen
     for x in range(SCREEN_WIDTH):
         ray_angle = player_angle - FOV / 2.0 + (x / SCREEN_WIDTH) * FOV
         dist_to_wall = 0
         hit_wall = False
 
-        focal_x = math.sin(ray_angle)
-        focal_y = math.cos(ray_angle)
+        sin_ra, cos_ra = get_sin_cos(ray_angle)
+        focal_x = sin_ra
+        focal_y = cos_ra
 
         while not hit_wall and dist_to_wall < DEPTH:
             dist_to_wall += 0.1
@@ -94,36 +122,19 @@ def perform_raycasting():
 
         ceiling = int(SCREEN_HEIGHT / 2 - SCREEN_HEIGHT / dist_to_wall)
         floor = SCREEN_HEIGHT - ceiling
-        x_screen = x * (SCREEN_WIDTH / SCREEN_WIDTH)
 
-        pygame.draw.line(screen, (0, 0, 65), (x_screen, 0), (x_screen, ceiling))
+        pygame.draw.line(screen, (0, 0, 35), (x, 0), (x, ceiling))
 
-        # Lighting and shading:
-        light_intensity = calculate_light_intensity(test_x, test_y, dist_to_wall) # Calculate light intensity
+        light_intensity = calculate_light_intensity(test_x, test_y, dist_to_wall)
 
-        base_shade = 200 # Base brightness of the walls
+        base_shade = 200
         shade = int(base_shade * light_intensity)
-        shade = max(0, min(shade, 255)) # Clamp the shade value
+        shade = max(0, min(shade, 255))
 
-        pygame.draw.line(screen, (shade, shade, shade + 15), (x_screen, ceiling), (x_screen, floor))
-        pygame.draw.line(screen, (0, 0, 35), (x_screen, floor), (x_screen, SCREEN_HEIGHT))
+        pygame.draw.line(screen, (shade, shade, shade), (x, ceiling), (x, floor))
+        pygame.draw.line(screen, (0, 0, 65), (x, floor), (x, SCREEN_HEIGHT))
 
-        
-        # max_dist = DEPTH
-        # light_intensity = calculate_light_intensity(test_x, test_y, dist_to_wall)
-        
-        # base_shade = 200
-        # shade = int(base_shade * light_intensity)
-        # shade = max(0, min(shade + 15, 255))
-        
-        # pygame.draw.line(screen, (shade - 15, shade - 15, shade), (x_screen, ceiling), (x_screen, floor))
-        # pygame.draw.line(screen, (0, 0, 35), (x_screen, floor), (x_screen, SCREEN_HEIGHT))
-        
-        # shade = int(255 - (dist_to_wall / DEPTH) * 255)
-        # blue_shade = max(0, min(shade + 15, 255))
-        # pygame.draw.line(screen, (shade, shade, blue_shade), (x_screen, ceiling), (x_screen, floor))
-        # pygame.draw.line(screen, (0, 0, 35), (x_screen, floor), (x_screen, SCREEN_HEIGHT))
-        
+'''Draws a small mini-map on screen.'''
 def draw_mini_map():
     mini_map_x = SCREEN_WIDTH - MINI_MAP_SCALE * MAP_WIDTH - 2
     mini_map_y = 0
@@ -144,9 +155,10 @@ def draw_mini_map():
     pygame.draw.line(screen, (255, 255, 0), (fov_start_x, fov_start_y), (fov_end_x, fov_end_y))
     pygame.draw.circle(screen, (255, 0, 0), (int(mini_map_x + player_x * MINI_MAP_SCALE), int(mini_map_y + player_y * MINI_MAP_SCALE)), MINI_MAP_SCALE)
     
-    for lx, ly, _ in light_sources:
+    for lx, ly, _, _ in light_sources:
         pygame.draw.circle(screen, YELLOW, (int(mini_map_x + lx * MINI_MAP_SCALE), int(mini_map_y + ly * MINI_MAP_SCALE)), MINI_MAP_SCALE // 2)
 
+'''Draws instructions and info on screen'''
 def draw_info(fps):
     text_fps = font.render(f"FPS: {fps}", True, WHITE)
     text_w = font.render("W = Forward", True, WHITE)
@@ -164,6 +176,7 @@ def draw_info(fps):
     screen.blit(text_left, (10, 110))
     screen.blit(text_right, (10, 130))
 
+# Game loop
 running  = True
 while running:
     for event in pygame.event.get():
@@ -173,7 +186,7 @@ while running:
             if event.key == pygame.K_ESCAPE:
                 running = False
     
-    screen.fill((0, 0, 10))
+    screen.fill(BLACK)
     
     elapsed_time = clock.tick(60) / 1000.0
     handle_user_input(elapsed_time)
