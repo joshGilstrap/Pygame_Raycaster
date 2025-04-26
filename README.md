@@ -2,7 +2,7 @@
 
 This project is a simple 3D raycaster implemented using Pygame, inspired by classic first-person shooters. It renders a basic 3D environment from a 2D map, allowing the player to move and rotate within the generated world.
 
-![Recording2025-04-03111825-ezgif com-optimize](https://github.com/user-attachments/assets/4f90ce1e-17b9-4f7f-956e-9023df7b94eb)
+![Recording2025-04-26075425-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/f00993f2-851d-448e-897e-603a1c96434e)
 
 ## Features
 
